@@ -2,6 +2,9 @@
 #include "GL/glew.h"
 #include <iostream>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 int32_t _create_program(std::string vs_shader, std::string fs_shader) {
 
 	std::string vs_path = "../assets/shaders/" + vs_shader;
@@ -74,4 +77,57 @@ int32_t _create_program(std::string vs_shader, std::string fs_shader) {
 	delete info_log;
 
 	return program;
+}
+
+void _load_obj( std::string obj, drawable* d ){
+
+  std::string inputfile = "../assets/obj/" + obj;
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+
+  std::string err;
+  bool ret = tinyobj::LoadObj( &attrib, &shapes, &materials, &err, inputfile.c_str() );
+  if( !err.empty() ) {
+    std::cout << err << std::endl;
+  }
+
+  for( size_t s = 0; s < shapes.size(); s++ ) {
+    size_t index_offset = 0;
+    for( size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++ ) {
+      int fv = shapes[s].mesh.num_face_vertices[f];
+
+      for( size_t v = 0; v < fv; v++ ) {
+        tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
+        d->v_data.push_back( glm::vec3(
+          attrib.vertices[3 * idx.vertex_index + 0],
+          attrib.vertices[3 * idx.vertex_index + 1],
+          attrib.vertices[3 * idx.vertex_index + 2]
+        ) );
+
+        d->v_data.push_back( glm::vec3(
+          attrib.normals[3 * idx.normal_index + 0],
+          attrib.normals[3 * idx.normal_index + 1],
+          attrib.normals[3 * idx.normal_index + 2]
+        ) );
+
+        d->e_data.push_back( index_offset + v );
+      }
+      index_offset += fv;
+
+    }
+  }
+
+  glGenBuffers( 1, &d->v_buffer );
+  glGenBuffers( 1, &d->e_buffer );
+
+  glBindBuffer( GL_ARRAY_BUFFER, d->v_buffer );
+  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d->e_buffer );
+
+  glBufferData( GL_ARRAY_BUFFER, d->v_data.size() * sizeof( glm::vec3 ), d->v_data.data(), GL_STATIC_DRAW );
+  glBufferData( GL_ELEMENT_ARRAY_BUFFER, d->e_data.size() * sizeof( uint32_t ), d->e_data.data(), GL_STATIC_DRAW );
+
+ // glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  //glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
 }
