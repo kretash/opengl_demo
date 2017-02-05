@@ -46,8 +46,8 @@ public:
         m_mouse.rmb &= !( event_.button.button == SDL_BUTTON_RIGHT );
         break;
       case SDL_MOUSEMOTION:
-        m_mouse.x = event_.button.x;
-        m_mouse.y = event_.button.y;
+        m_mouse.x = (float) event_.button.x;
+        m_mouse.y = (float) event_.button.y;
       default:
         break;
       }

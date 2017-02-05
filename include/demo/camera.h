@@ -75,9 +75,9 @@ private:
   const float m_dir_speed = 0.01f;
   const float m_mouse_speed = 0.001f;
 
-  glm::vec2 m_movedir = glm::vec2( 0.0f, 0.0f );
-  glm::vec3 m_eye = glm::vec3( 0.0f, 1.0f, -5.0f );
-  glm::vec3 m_direction = glm::vec3( 0.0f, -0.2f, 1.0f );
+  glm::vec2 m_movedir = glm::vec2( 0.0f, 1.0f );
+  glm::vec3 m_eye = glm::vec3( 0.0f, -23.0f, -20.0f );
+  glm::vec3 m_direction = glm::vec3( 0.0f, 1.6f, 1.0f );
   glm::mat4 m_view = glm::mat4( 1.0f );
 
   mouse m_last_mouse;
