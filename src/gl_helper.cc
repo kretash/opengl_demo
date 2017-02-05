@@ -10,16 +10,34 @@ struct obj_db {
 	obj_db() {}
 	~obj_db() {}
 
-	obj_db(std::string n, GLint v, GLint e, GLuint ec) :
-		name(n), v_buffer(v), e_buffer(e), e_count(ec)
+	obj_db(std::string n, GLint v, GLint e, GLuint ec, GLuint vao) :
+		name(n), v_buffer(v), e_buffer(e), e_count(ec), vao(vao)
 	{}
 
 	std::string name = "";
 	GLint v_buffer = 0;
 	GLint e_buffer = 0;
 	GLuint e_count = 0;
+	GLuint vao = 0;
 };
 std::vector<obj_db> loaded_obj;
+
+struct vao_db {
+	vao_db() {}
+	~vao_db() {}
+
+	vao_db(GLuint vao, GLint ch1, GLint ch2, GLint ch3, GLint ch4, GLint ch5) :
+		vao(vao), ch1(ch1), ch2(ch2), ch3(ch3), ch4(ch4), ch5(ch5)
+	{}
+
+	GLuint vao = 0;
+	GLint ch1 = 0;
+	GLint ch2 = 0;
+	GLint ch3 = 0;
+	GLint ch4 = 0;
+	GLint ch5 = 0;
+};
+std::vector<vao_db> used_vao;
 
 int32_t _create_program(std::string vs_shader, std::string fs_shader) {
 
@@ -103,6 +121,7 @@ void _load_obj(std::string obj, drawable* d) {
 			d->e_buffer = loaded_obj[i].e_buffer;
 			d->v_buffer = loaded_obj[i].v_buffer;
 			d->e_count = loaded_obj[i].e_count;
+			d->vao = loaded_obj[i].vao;
 			return;
 		}
 	}
@@ -145,8 +164,25 @@ void _load_obj(std::string obj, drawable* d) {
 		}
 	}
 
+	//TODO, fill in while loading the obj
+	GLint channel1 = 3;
+	GLint channel2 = 3;
+	GLint channel3 = 0;
+	GLint channel4 = 0;
+	GLint channel5 = 0;
+	bool found_vao = false;
 
-	glGenVertexArrays(1, &d->vao);
+	for (int i = 0; i < used_vao.size(); ++i) {
+		if (used_vao[i].ch1 == 3 && used_vao[i].ch2 == 3 && used_vao[i].ch3 == 0 &&
+			used_vao[i].ch4 == 0 && used_vao[i].ch5 == 0) {
+			d->vao = used_vao[i].vao;
+			found_vao = true;
+			break;
+		}
+	}
+
+	if (!found_vao)	glGenVertexArrays(1, &d->vao);
+
 	glBindVertexArray(d->vao);
 
 	glGenBuffers(1, &d->v_buffer);
@@ -157,20 +193,22 @@ void _load_obj(std::string obj, drawable* d) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, d->e_buffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, d->e_data.size() * sizeof(uint32_t), d->e_data.data(), GL_STATIC_DRAW);
 
-	GLuint vertex_index = 0;
-	glEnableVertexAttribArray(vertex_index);
-	glVertexAttribPointer(vertex_index, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void *)0);
-	GLuint normal_index = 1;
-	glEnableVertexAttribArray(normal_index);
-	glVertexAttribPointer(normal_index, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void *)(sizeof(float) * 3));
+	if (!found_vao) {
+		GLuint vertex_index = 0;
+		glEnableVertexAttribArray(vertex_index);
+		glVertexAttribPointer(vertex_index, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void *)0);
+		GLuint normal_index = 1;
+		glEnableVertexAttribArray(normal_index);
+		glVertexAttribPointer(normal_index, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void *)(sizeof(float) * 3));
+	}
 
 	glBindVertexArray(0);
-	glBindBuffer( GL_ARRAY_BUFFER, 0 );
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	d->e_count = (GLuint)d->e_data.size();
 
-	loaded_obj.push_back(obj_db(obj, d->v_buffer, d->e_buffer, d->e_count));
+	loaded_obj.push_back(obj_db(obj, d->v_buffer, d->e_buffer, d->e_count, d->vao));
 
 	d->e_data.clear();
 	d->e_data.shrink_to_fit();

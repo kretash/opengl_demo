@@ -13,6 +13,13 @@
 #include "demo/input.h"
 #include "demo/camera.h"
 
+struct render_state {
+	GLuint bound_program = 0;
+	GLuint bound_vao = 0;
+	GLuint bound_vbuffer = 0;
+	GLuint bound_ebuffer = 0;
+};
+
 int main(int argc, char** argv) {
 
 	state world;
@@ -39,17 +46,15 @@ int main(int argc, char** argv) {
 
 	std::vector<drawable> render_bin;
 
-	const int cubes = 32;
+	const int cubes = 16;
 
 	for (int i = 0; i < cubes; ++i) {
 		for (int e = 0; e < cubes; ++e) {
 
 			drawable cube;
 
-			//if ((e + i) % 2 == 0)
-			_load_obj("cube.obj", &cube);
-			//else
-			//	_load_obj("sphere.obj", &cube);
+			if ((e + i) % 2 == 0) _load_obj("cube.obj", &cube);
+			else _load_obj("sphere.obj", &cube);
 
 			cube.model = glm::translate(cube.model, glm::vec3(1.15*i, 0.0f, 1.5f*e));
 			render_bin.push_back(cube);
@@ -86,14 +91,9 @@ int main(int argc, char** argv) {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_bin[i].e_buffer);
 	}
 
-	/*
-	GLuint vao = 0;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	*/
-
 	std::shared_ptr<Camera> camera = std::make_shared<Camera>();
 	float time = 0.0f;
+	render_state render_state = {};
 
 	while (world.running) {
 
@@ -105,8 +105,8 @@ int main(int argc, char** argv) {
 
 		for (int i = 0; i < cubes; ++i) {
 			for (int e = 0; e < cubes; ++e) {
-				render_bin[i * 10 + e].model = glm::translate(glm::mat4(1.0f),
-					glm::vec3(1.15f*i, 0.3f*sinf(time*3.0f + (float)i / 10.0f + (float)e / 10.0f), 1.15f*e));
+				render_bin[i * cubes + e].model = glm::translate(glm::mat4(1.0f),
+					glm::vec3(1.15f*i, 0.3f*sinf(time*3.0f + (float)i / 8.0f + (float)e / 8.0f), 1.15f*e));
 			}
 		}
 
@@ -120,12 +120,29 @@ int main(int argc, char** argv) {
 		glUniformMatrix4fv(view_location, 1, false, &camera->get_view()[0][0]);
 
 		for (int i = 0; i < render_bin.size(); ++i) {
-			if (i == 0) {
-				glBindVertexArray(render_bin[i].vao);
-				glBindBuffer(GL_ARRAY_BUFFER, render_bin[i].v_buffer);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_bin[i].e_buffer);
+
+			if (render_state.bound_program != program) {
+				glUseProgram(program);
+				render_state.bound_program = program;
 			}
-				render_bin[i].bind_model(program);
+
+			if (render_state.bound_vao != render_bin[i].vao) {
+				glBindVertexArray(render_bin[i].vao);
+				render_state.bound_vao = render_bin[i].vao;
+			}
+
+			if (render_state.bound_vbuffer != render_bin[i].v_buffer) {
+				glBindBuffer(GL_ARRAY_BUFFER, render_bin[i].v_buffer);
+				render_state.bound_vbuffer = render_bin[i].v_buffer;
+			}
+
+			if (render_state.bound_ebuffer != render_bin[i].e_buffer) {
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_bin[i].e_buffer);
+				render_state.bound_ebuffer = render_bin[i].e_buffer;
+			}
+
+			render_bin[i].bind_model(program);
+
 			glDrawElements(GL_TRIANGLES, render_bin[i].e_count, GL_UNSIGNED_INT, (void*)0);
 
 		}
