@@ -22,6 +22,7 @@ public:
   void update() {
     SDL_Event event_;
     while( SDL_PollEvent( &event_ ) ) {
+		ImGui_ImplSdlGL3_ProcessEvent(&event_);
       switch( event_.type ) {
       case SDL_QUIT:
         m_quit = true;

@@ -5,8 +5,11 @@
 #include <iostream>
 #include <math.h>
 #include <iostream>
+#include <chrono>
 #include <fstream>
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl_gl3.h"
 #include "SDL/SDL.h"
 #include "demo/demo.h"
 #include "demo/gl_helper.h"
@@ -44,6 +47,8 @@ int main(int argc, char** argv) {
 		assert(false && "GLEW INIT FAILED");
 	}
 
+	ImGui_ImplSdlGL3_Init(window);
+
 	std::vector<drawable> render_bin;
 
 	const int cubes = 16;
@@ -53,8 +58,9 @@ int main(int argc, char** argv) {
 
 			drawable cube;
 
-			if ((e + i) % 2 == 0) _load_obj("cube.obj", &cube);
-			else _load_obj("sphere.obj", &cube);
+			//if ((e + i) % 2 == 0) 
+				_load_obj("cube.obj", &cube);
+			//else _load_obj("sphere.obj", &cube);
 
 			cube.model = glm::translate(cube.model, glm::vec3(1.15*i, 0.0f, 1.5f*e));
 			render_bin.push_back(cube);
@@ -93,9 +99,13 @@ int main(int argc, char** argv) {
 
 	std::shared_ptr<Camera> camera = std::make_shared<Camera>();
 	float time = 0.0f;
+	float frame = 0.016f;
+	bool show_fps = true;
 	render_state render_state = {};
 
 	while (world.running) {
+
+		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
 		Input::get_instace()->update();
 		world.running = !Input::get_instace()->quit();
@@ -109,6 +119,8 @@ int main(int argc, char** argv) {
 					glm::vec3(1.15f*i, 0.3f*sinf(time*3.0f + (float)i / 8.0f + (float)e / 8.0f), 1.15f*e));
 			}
 		}
+
+		ImGui_ImplSdlGL3_NewFrame(window);
 
 		glClearColor(0.2f, 0.5f, 0.5f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -147,8 +159,24 @@ int main(int argc, char** argv) {
 
 		}
 
+		if (show_fps)
+		{
+			ImGui::Begin("Frame", &show_fps);
+			ImGui::Text( std::string( "Frame->" + std::to_string( frame )).c_str() );
+			ImGui::End();
+		}
+
+		ImGui::Render();
 		SDL_GL_SwapWindow(window);
-		time += 0.016f;
+
+		std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<float> time_span = std::chrono::duration_cast<std::chrono::duration<float>>(t2 - t1);
+		frame = time_span.count();
+		time += time_span.count();
 	}
+
+	ImGui_ImplSdlGL3_Shutdown();
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 	return 0;
 }
